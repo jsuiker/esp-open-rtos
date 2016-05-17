@@ -39,7 +39,7 @@ void http_get_task(void *pvParameters)
             post_request = http_post_request(WEB_SERVER, "/", 
                                                 "application/json;charset=utf-8", (char*) post_body);
 
-            http_process_request(WEB_SERVER, "80", get_request, 1024);
+            http_process_request(WEB_SERVER, "80", get_request, 2048);
         }
 
         printf("\r\n");
