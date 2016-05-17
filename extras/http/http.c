@@ -61,24 +61,51 @@ char* http_post_request(char* host, char* endpoint, char* content_type, char* bo
     return result;
 }
 
-int on_body_data(http_parser* parser, const char *at, size_t length) {
+int on_body_callback(http_parser* parser, const char *at, size_t length) {
     /*    access to thread local custom_data_t struct.
      *    Use this access save parsed data for later use into thread local
      *    buffer, or communicate over socket
      */
     
-
+    printf("body length: %d", (uint8_t) length);
     // parser->data;
     return 0;
 }
 
 int on_header_field_callback(http_parser* parser, const char *at, size_t length) {
 
-
-
-
+	printf("header field length: %d", (uint8_t) length);
 
     return 0;
+}
+
+int on_header_value_callback(http_parser* parser, const char *at, size_t length) {
+
+	printf("header value length: %d", (uint8_t) length);
+
+    return 0;
+}
+
+int on_status_callback(http_parser* parser, const char *at, size_t length) {
+
+	printf("on_status()");
+
+	return 0;
+
+}
+
+int on_message_begin_callback(http_parser* parser) {
+
+	printf("on_message_begin()");
+
+	return 0;
+}
+
+int on_headers_complete_callback(http_parser* parser) {
+
+	printf("on_headers_complete()");
+
+	return 0;
 }
 
 bool http_process_request(char* server, char* port, char* request,  uint16_t max_buffer_length) {
@@ -87,10 +114,12 @@ bool http_process_request(char* server, char* port, char* request,  uint16_t max
     bzero(out_buf, max_buffer_length);
 
     http_parser_settings parser_settings;
-    parser_settings.on_body = on_body_data;
+    parser_settings.on_body = on_body_callback;
     parser_settings.on_header_field = on_header_field_callback;
-
-    printf("sizeof(http_parser): %d\r\n", sizeof(http_parser));
+    parser_settings.on_header_value = on_header_value_callback;
+    parser_settings.on_message_begin = on_message_begin_callback;
+    parser_settings.on_status = on_status_callback;
+    parser_settings.on_headers_complete = on_headers_complete_callback;
     http_parser *parser = malloc(sizeof(http_parser));
 
     const struct addrinfo hints = {
@@ -146,11 +175,10 @@ bool http_process_request(char* server, char* port, char* request,  uint16_t max
         r = read(s, recv_buf, 127);
         if(r > 0) {
             strcat(out_buf, recv_buf);
-            // printf("%s", recv_buf);
         }
     } while(r > 0);
     close(s);
 
-    http_parser_execute(parser, &parser_settings, out_buf, 0);
+    printf("http_parser_execute returned status %i\r\n", http_parser_execute(parser, &parser_settings, out_buf, 737));
     return true;
 }

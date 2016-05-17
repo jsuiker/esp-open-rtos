@@ -80,17 +80,16 @@ do {                                                                 \
 #define CALLBACK_NOTIFY_(FOR, ER)                                    \
 do {                                                                 \
 	assert(HTTP_PARSER_ERRNO(parser) == HPE_OK);                       \
-																																		 \
+																		\
 	if (LIKELY(settings->on_##FOR)) {                                  \
 		parser->state = CURRENT_STATE();                                 \
 		if (UNLIKELY(0 != settings->on_##FOR(parser))) {                 \
 			SET_ERRNO(HPE_CB_##FOR);                                       \
 		}                                                                \
 		UPDATE_STATE(parser->state);                                     \
-																																		 \
 		/* We either errored above or got paused; get out */             \
 		if (UNLIKELY(HTTP_PARSER_ERRNO(parser) != HPE_OK)) {             \
-			return (ER);                                                   \
+			return (ER); 												\
 		}                                                                \
 	}                                                                  \
 } while (0)
@@ -703,12 +702,14 @@ size_t http_parser_execute (http_parser *parser,
 	for (p=data; p != data + len; p++) {
 		ch = *p;
 
+		printf("%c", ch);
+
 		if (PARSING_HEADER(CURRENT_STATE()))
 			COUNT_HEADER_SIZE(1);
 
 reexecute:
-		switch (CURRENT_STATE()) {
 
+		switch (CURRENT_STATE()) {
 			case s_dead:
 				/* this state is used after a 'Connection: close' message
 				 * the parser will error out if it reads another message
@@ -760,6 +761,7 @@ reexecute:
 			{
 				parser->flags = 0;
 				parser->content_length = ULLONG_MAX;
+				printf("case s_start_res");
 
 				switch (ch) {
 					case 'H':
@@ -1249,11 +1251,13 @@ reexecute:
 			case s_header_field_start:
 			{
 				if (ch == CR) {
+					printf("ch == CR");
 					UPDATE_STATE(s_headers_almost_done);
 					break;
 				}
 
 				if (ch == LF) {
+					printf("ch == LF");
 					/* they might be just sending \n instead of \r\n so this would be
 					 * the second \n to denote the end of headers*/
 					UPDATE_STATE(s_headers_almost_done);
@@ -1261,6 +1265,7 @@ reexecute:
 				}
 
 				c = TOKEN(ch);
+				printf("%c", ch);
 
 				if (UNLIKELY(!c)) {
 					SET_ERRNO(HPE_INVALID_HEADER_TOKEN);
@@ -1512,6 +1517,7 @@ reexecute:
 					if (ch == CR) {
 						UPDATE_STATE(s_header_almost_done);
 						parser->header_state = h_state;
+						printf("CALLBACK_DATA(header_value)");
 						CALLBACK_DATA(header_value);
 						break;
 					}
@@ -1520,6 +1526,7 @@ reexecute:
 						UPDATE_STATE(s_header_almost_done);
 						COUNT_HEADER_SIZE(p - start);
 						parser->header_state = h_state;
+						printf("CALLBACK_DATA_NOADVANCE(header_value)");
 						CALLBACK_DATA_NOADVANCE(header_value);
 						REEXECUTE();
 					}
@@ -1702,6 +1709,7 @@ reexecute:
 				}
 
 				UPDATE_STATE(s_header_value_lws);
+				printf("UPDATE_STATE(s_header_value_lws);");
 				break;
 			}
 
@@ -1731,6 +1739,7 @@ reexecute:
 				}
 
 				UPDATE_STATE(s_header_field_start);
+				printf("UPDATE_STATE(s_header_field_start);");
 				REEXECUTE();
 			}
 
@@ -1738,6 +1747,7 @@ reexecute:
 			{
 				STRICT_CHECK(ch != LF);
 				UPDATE_STATE(s_header_value_discard_lws);
+				printf("UPDATE_STATE(s_header_value_discard_lws);");
 				break;
 			}
 
@@ -1767,6 +1777,8 @@ reexecute:
 					/* header value was empty */
 					MARK(header_value);
 					UPDATE_STATE(s_header_field_start);
+					printf("UPDATE_STATE(s_header_field_start);");
+					printf("CALLBACK_DATA_NOADVANCE(header_value)");
 					CALLBACK_DATA_NOADVANCE(header_value);
 					REEXECUTE();
 				}
@@ -1779,6 +1791,8 @@ reexecute:
 				if (parser->flags & F_TRAILING) {
 					/* End of a chunked request */
 					UPDATE_STATE(s_message_done);
+					printf("UPDATE_STATE(s_message_done);");
+					printf("CALLBACK_NOTIFY_NOADVANCE(chunk_complete);");
 					CALLBACK_NOTIFY_NOADVANCE(chunk_complete);
 					REEXECUTE();
 				}
@@ -1787,11 +1801,13 @@ reexecute:
 					 per the HTTP specification. */
 				if ((parser->flags & F_CHUNKED) &&
 						(parser->flags & F_CONTENTLENGTH)) {
+					printf("parser->flags & F_CHUNKED && parser->flags & F_CONTENTLENGTH");
 					SET_ERRNO(HPE_UNEXPECTED_CONTENT_LENGTH);
 					goto error;
 				}
 
 				UPDATE_STATE(s_headers_done);
+				printf("UPDATE_STATE(s_headers_done)");
 
 				/* Set this here so that on_headers_complete() callbacks can see it */
 				parser->upgrade =
@@ -1846,12 +1862,15 @@ reexecute:
 																(parser->flags & F_SKIPBODY) || !hasBody)) {
 					/* Exit, the rest of the message is in a different protocol. */
 					UPDATE_STATE(NEW_MESSAGE());
+					printf("UPDATE_STATE(NEW_MESSAGE());");
+					printf("CALLBACK_NOTIFY(message_complete)");
 					CALLBACK_NOTIFY(message_complete);
 					RETURN((p - data) + 1);
 				}
 
 				if (parser->flags & F_SKIPBODY) {
 					UPDATE_STATE(NEW_MESSAGE());
+					printf("CALLBACK_NOTIFY(message_complete)");
 					CALLBACK_NOTIFY(message_complete);
 				} else if (parser->flags & F_CHUNKED) {
 					/* chunked encoding - ignore Content-Length header */
@@ -1860,6 +1879,7 @@ reexecute:
 					if (parser->content_length == 0) {
 						/* Content-Length header given but zero: Content-Length: 0\r\n */
 						UPDATE_STATE(NEW_MESSAGE());
+						printf("CALLBACK_NOTIFY(message_complete)");
 						CALLBACK_NOTIFY(message_complete);
 					} else if (parser->content_length != ULLONG_MAX) {
 						/* Content-Length header given and non-zero */
@@ -1868,6 +1888,7 @@ reexecute:
 						if (!http_message_needs_eof(parser)) {
 							/* Assume content-length 0 - read the next */
 							UPDATE_STATE(NEW_MESSAGE());
+							printf("CALLBACK_NOTIFY(message_complete)");
 							CALLBACK_NOTIFY(message_complete);
 						} else {
 							/* Read body until EOF */
@@ -1908,6 +1929,7 @@ reexecute:
 					 * complete-on-length. It's not clear that this distinction is
 					 * important for applications, but let's keep it for now.
 					 */
+					printf("CALLBACK_DATA_(body, p - body_mark + 1, p - data);");
 					CALLBACK_DATA_(body, p - body_mark + 1, p - data);
 					REEXECUTE();
 				}
@@ -1924,6 +1946,7 @@ reexecute:
 
 			case s_message_done:
 				UPDATE_STATE(NEW_MESSAGE());
+				printf("CALLBACK_NOTIFY(message_complete);");
 				CALLBACK_NOTIFY(message_complete);
 				if (parser->upgrade) {
 					/* Exit, the rest of the message is in a different protocol. */
