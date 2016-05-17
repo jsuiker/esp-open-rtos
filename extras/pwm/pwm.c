@@ -29,7 +29,7 @@ typedef struct pwmInfoDefinition
     uint8_t running;
 
     uint16_t freq;
-    uint16_t dutyCicle;
+    uint16_t dutyCycle;
 
     /* private */
     uint32_t _maxLoad;
@@ -115,6 +115,8 @@ void pwm_set_freq(uint16_t freq)
     }
 
     timer_set_frequency(FRC1, freq);
+
+    // Get available resolution from timer
     pwmInfo._maxLoad = timer_get_load(FRC1);
 
     if (pwmInfo.running)
@@ -127,7 +129,7 @@ void pwm_set_duty(uint16_t duty)
 {
     bool output;
 
-    pwmInfo.dutyCicle = duty;
+    pwmInfo.dutyCycle = duty;
     if (duty > 0 && duty < UINT16_MAX) {
         pwm_restart();
 	return;
@@ -154,7 +156,7 @@ void pwm_restart()
 
 void pwm_start()
 {
-    pwmInfo._onLoad = pwmInfo.dutyCicle * pwmInfo._maxLoad / UINT16_MAX;
+    pwmInfo._onLoad = (float) pwmInfo.dutyCycle * pwmInfo._maxLoad / (float) UINT16_MAX;
     pwmInfo._offLoad = pwmInfo._maxLoad - pwmInfo._onLoad;
     pwmInfo._step = PERIOD_ON;
 
