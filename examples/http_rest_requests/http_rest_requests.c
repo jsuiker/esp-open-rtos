@@ -18,6 +18,14 @@
 #define WEB_SERVER "jsonplaceholder.typicode.com"
 #define USER_AGENT "esp-open-rtos/0.1 esp8266"
 
+void get_callback(int status_code, char* body) {
+    if (status_code < 400) {
+        printf("\r\n============== PARSED RESPONSE ================\r\n");
+        printf("\r\n%s\r\n", body);
+    } else {
+        printf("Something went wrong... \r\n");
+    }
+}
 
 void http_get_task(void *pvParameters) {
 
@@ -46,10 +54,19 @@ void http_get_task(void *pvParameters) {
             vTaskDelay(1000 / portTICK_RATE_MS);
         }
 
-        printf("\r\n============== SENDING REQUEST ================\r\n");
+        printf("\r\n\r\n============== SENDING REQUEST ================\r\n");
         printf("%s\r\n", request);
 
-        http_process_request(WEB_SERVER, "80", request, 2048);
+        http_process_request(WEB_SERVER, "80", request, 2048, &get_callback);
+    }
+}
+
+void post_callback(int status_code, char* body) {
+    if (status_code < 400) {
+        printf("\r\n============== PARSED RESPONSE ================\r\n");
+        printf("\r\n%s\r\n", body);
+    } else {
+        printf("Something went wrong... \r\n");
     }
 }
 
@@ -83,10 +100,10 @@ void http_post_task(void *pvParameters)
 
         request = http_assemble_request(post_req, post_headers, 5, post_body);
 
-        printf("\r\n============== SENDING REQUEST ================\r\n");
+        printf("\r\n\r\n============== SENDING REQUEST ================\r\n");
         printf("%s\r\n", request);
 
-        http_process_request(WEB_SERVER, "80", request, 2048);
+        http_process_request(WEB_SERVER, "80", request, 2048, &post_callback);
     }
 }
 

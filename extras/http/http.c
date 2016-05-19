@@ -11,7 +11,10 @@
 #include "lwip/netdb.h"
 #include "lwip/dns.h"
 #include "http_parser.h"
+#include "http.h"
 #include <string.h>
+
+response_callback res_cb;
 
 /*
  *
@@ -21,29 +24,33 @@
 
 int on_status(http_parser* parser, const char *at, size_t length) {
 
-	printf("HTTP/%i.%i %i ", parser->http_major, parser->http_minor, parser->status_code);
-	printf("%.*s\r\n", length, at);
+	printf("\r\n=======       HTTP/%i.%i %i %.*s       =======\r\n", parser->http_major, parser->http_minor, parser->status_code, length, at);
 
 	return 0;
 }
 
 int on_header_field(http_parser* parser, const char *at, size_t length) {
 
-	printf("%.*s: ", length, at);
+	// printf("%.*s: ", length, at);
 
 	return 0;
 }
 
 int on_header_value(http_parser* parser, const char *at, size_t length) {
 
-	printf("%.*s\r\n", length, at);
+	// printf("%.*s\r\n", length, at);
 
 	return 0;
 }
 
 int on_body(http_parser* parser, const char *at, size_t length) {
 
-	printf("%.*s\r\n", length, at);
+	// printf("%.*s\r\n", length, at);
+
+	char* body = (char*) calloc(length+1, sizeof(char));
+	sprintf(body, "%.*s", length, at);
+
+	res_cb(parser->status_code, body);
 
 	return 0;
 }
@@ -60,9 +67,7 @@ int on_url(http_parser* parser, const char *at, size_t length) {
  */
 
 int on_headers_complete(http_parser* parser) {
-	
-	printf("\r\n");
-
+	// NOT YET IMPLEMENTED
 	return 0;
 }
 
@@ -88,7 +93,9 @@ int on_chunk_complete(http_parser* parser) {
 
 
 
-bool http_process_request(char* server, char* port, char* request,  uint16_t max_buffer_length) {
+bool http_process_request(char* server, char* port, char* request,  uint16_t max_buffer_length, response_callback cb) {
+
+	res_cb = cb;
 
 	char out_buf[max_buffer_length];
 	bzero(out_buf, max_buffer_length);
@@ -165,7 +172,7 @@ bool http_process_request(char* server, char* port, char* request,  uint16_t max
 
 	// printf("\r\n=============== RAW   RESPONSE ================\r\n");
 	// printf("%s\r\n", out_buf);
-	printf("\r\n============== PARSED RESPONSE ================\r\n");
+	// printf("\r\n============== PARSED RESPONSE ================\r\n");
 	http_parser_execute(parser, &ps, out_buf, strlen(out_buf));
 
 	return true;
