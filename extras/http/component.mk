@@ -1,6 +1,6 @@
 # Component makefile for extras/http
 
-EXTRA_CFLAGS = -DNDEBUG
+# EXTRA_CFLAGS = -DNDEBUG
 INC_DIRS += $(http_ROOT)
 
 # args for passing into compile rule generation
