@@ -18,13 +18,14 @@ response_callback res_cb;
 
 /*
  *
- *  The following callbacks are designated as Data Callbacks by the http_parser documentation...
- *
+ *  The following callbacks are designated as Data Callbacks
+ *   by the http_parser documentation...
  */
 
 int on_status(http_parser* parser, const char *at, size_t length) {
 
-	printf("\r\n=======       HTTP/%i.%i %i %.*s       =======\r\n", parser->http_major, parser->http_minor, parser->status_code, length, at);
+	printf("\r\n=======       HTTP/%i.%i %i %.*s       =======\r\n", 
+		parser->http_major, parser->http_minor, parser->status_code, length, at);
 
 	return 0;
 }
@@ -47,8 +48,8 @@ int on_body(http_parser* parser, const char *at, size_t length) {
 
 	// printf("%.*s\r\n", length, at);
 
-	char* body = (char*) calloc(length+1, sizeof(char));
-	sprintf(body, "%.*s", length, at);
+	char* body = (char*) calloc(length + 1, sizeof(char));
+	strncat(body, at, length);
 
 	res_cb(parser->status_code, body);
 
@@ -62,8 +63,8 @@ int on_url(http_parser* parser, const char *at, size_t length) {
 
 /*
  *
- *  The following callbacks are designated as Notification Callbacks by the http_parser documentation...
- *
+ *  The following callbacks are designated as Notification Callbacks
+ *   by the http_parser documentation...
  */
 
 int on_headers_complete(http_parser* parser) {
@@ -93,7 +94,8 @@ int on_chunk_complete(http_parser* parser) {
 
 
 
-bool http_process_request(char* server, char* port, char* request,  uint16_t max_buffer_length, response_callback cb) {
+bool http_process_request(char* server, char* port, char* request,
+  uint16_t max_buffer_length, response_callback cb) {
 
 	res_cb = cb;
 
